@@ -55,7 +55,17 @@
       <select v-model="pathTarget">
         <option v-for="node in this.nodes" :key="node.id">{{node.id}}</option>
       </select>
-      <button @click="findpath">Path</button>
+      <button @click="findAllPathes">Find pathes</button>
+    </div> 
+
+    <div >
+      <div v-for="(path, index) in this.pathes"
+        :key = index
+        class="node__item"
+      >
+        <p class="node__id">path: {{path}}</p>
+        <button @click="highLightPath(index)" style="color: green;">show</button>
+      </div>
     </div> 
       
   </div>
@@ -73,7 +83,6 @@
         </defs>
       <g class="graph__group">
         <g class="graph__edges" />
-        <g class="graph__path" />
         <g class="graph__nodes" />
       </g>
     </svg>
@@ -87,6 +96,7 @@ import { Component, Prop, Vue } from "vue-property-decorator";
 import * as d3 from "d3";
 import createGraph, { NodeId } from 'ngraph.graph';
 import path from 'ngraph.path';
+import Graph from 'node-all-paths';
 
 @Component
 export default class GraphDirected extends Vue {
@@ -105,7 +115,7 @@ export default class GraphDirected extends Vue {
   nodes:any = [];
   links:any = [];
   simulation: any;
-  path!: any;
+  pathes = [];
   link!: any;
   node!: any;
   svg!: any;
@@ -123,7 +133,6 @@ export default class GraphDirected extends Vue {
     // start data
     this.nodes = this.dataNodes.slice();
     this.links = this.dataEdges.slice();
-    this.path = [];
     // layout
     this.svg = d3.select("svg");
     this.g = d3.select(".graph__group");
@@ -138,8 +147,6 @@ export default class GraphDirected extends Vue {
         .on("zoom", zoomed));
     // link
     this.link = d3.select(".graph__edges").selectAll(".link")
-    // path
-    this.path = d3.select(".graph__path").selectAll(".path")
     // node
     this.node = d3.select(".graph__nodes").selectAll(".node");
     
@@ -227,6 +234,7 @@ export default class GraphDirected extends Vue {
     this.restart();
   }
 
+  /* shortest
   findpath() {
     const graph = createGraph();
     this.nodes.forEach((node: any) => {
@@ -241,22 +249,51 @@ export default class GraphDirected extends Vue {
     let toNodeId = this.getNodeById(this.pathTarget);
     let foundPath = pathFinder.find(fromNodeId, toNodeId);
     this.setCurPath(foundPath);
-    console.log('currentPath', this.currentPathLines); 
     
+    this.highLightPath(0);
+  }
+  */
+
+  //all pathes
+  findAllPathes() {
+    console.log('nodes', this.nodes);
+    console.log('links', this.links);
+    const graph = new Graph()
+
+    this.nodes.forEach( (node: any) => {
+      const name = node.id;
+      console.log(name)
+      const targets = this.links.filter( (link: any) => {
+        return (link.source.id === name)
+      });
+      console.log('targets', targets)
+      const neighbours = targets.reduce((obj: any, link: any) => {
+        obj[link.target.id] = 1;
+       return obj
+      }, {})
+      console.log('neighbours',neighbours)
+      graph.addNode(name, neighbours);
+    })
+
+    this.pathes = graph.path(this.pathSource, this.pathTarget);
+    console.log('pathes', this.pathes);
+  }
+
+  highLightPath(index: number) {
+    this.setCurPath(this.pathes[index]);
     const all = d3.selectAll("line")
-      .attr('stroke', (d: any) => { 
-        console.log('d line',d, this.inPath(d));
-        if (this.inPath(d)) return 'red'
-        return '#c4c4c4'
-      })
+    .attr('stroke', (d: any) => { 
+      if (this.inPath(d)) return 'green'
+      return '#c4c4c4'
+    })
   }
 
   setCurPath(foundPath: any) {
     const lineArr = []
     for (let i=0; i<foundPath.length-1; i++) {
       const line = {
-        source: foundPath[i+1].id,
-        target: foundPath[i].id,
+        source: this.getNodeById(foundPath[i]),
+        target: this.getNodeById(foundPath[i+1]),
       }
       lineArr.push(line);
     }
