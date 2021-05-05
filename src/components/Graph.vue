@@ -162,7 +162,7 @@ export default class GraphDirected extends Vue {
         .force("x", d3.forceX(this.width/2))
         .force("y", d3.forceY(this.height/2))
         //.force("center", d3.forceCenter(this.width/2, this.height/2))
-        .alphaTarget(1)
+        .alphaTarget(0)
         .on("tick", this.ticked);
   }
 
@@ -173,6 +173,7 @@ export default class GraphDirected extends Vue {
         .attr("y1", (d:any) => { return d.source.y; })
         .attr("x2", (d:any) => { return d.target.x; })
         .attr("y2", (d:any) => { return d.target.y; });
+    //console.log('simulation', this.simulation.alpha())
   }
 
   restart() {
