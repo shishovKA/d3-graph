@@ -15,8 +15,8 @@ import { tutorial } from './testdata/startdata';
   },
 })
 export default class App extends Vue {
-  nodes = tutorial.nodes;
-  edges =tutorial.links;
+  private nodes = tutorial.nodes;
+  private edges = tutorial.links;
 }
 </script>
 

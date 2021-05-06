@@ -110,113 +110,115 @@
 </template>
 
 <script lang="ts">
-import { Component, Prop, Watch, Vue } from "vue-property-decorator";
-import * as d3 from "d3";
+import { Component, Prop, Watch, Vue } from 'vue-property-decorator';
+import * as d3 from 'd3';
 // @ts-ignore
 import Graph from 'node-all-paths';
-//import createGraph from 'ngraph.graph';
-//import path from 'ngraph.path';
+// import createGraph from 'ngraph.graph';
+// import path from 'ngraph.path';
 
 @Component
 export default class GraphDirected extends Vue {
   @Prop() private dataNodes!: any;
   @Prop() private dataEdges!: any;
 
-  newNodeName = '';
-  source = '';
-  target = '';
-  sourceId = 0;
-  targetId = 1;
-  pathSourceId = 0;
-  pathTargetId = 1;
-  pathIndex = -1;
-  currentPathLines: any[] = [];
+  private newNodeName = '';
+  private source = '';
+  private target = '';
+  private sourceId = 0;
+  private targetId = 1;
+  private pathSourceId = 0;
+  private pathTargetId = 1;
+  private pathIndex = -1;
+  private currentPathLines: any[] = [];
 
-  width = 500;
-  height = 500;
-  nodes:any = [];
-  links:any = [];
-  simulation: any;
-  pathes = [];
-  link!: any;
-  node!: any;
-  svg!: any;
-  g!: any;
+  private width = 500;
+  private height = 500;
+  private nodes: any = [];
+  private links: any = [];
+  private simulation: any;
+  private pathes = [];
+  private link!: any;
+  private node!: any;
+  private svg!: any;
+  private g!: any;
 
-  mounted() {  
-    this.initLayout();  
+  private mounted() {
+    this.initLayout();
     this.initForce();
     this.restart();
     this.findAllPathes();
   }
 
-  initLayout() {
+  private initLayout() {
     this.nodes = this.dataNodes.slice();
     this.links = this.dataEdges.slice();
-    this.svg = d3.select("svg");
-    this.g = d3.select(".graph__group");
+    this.svg = d3.select('svg');
+    this.g = d3.select('.graph__group');
 
-    const zoomed = ({transform}:any) => {
-      this.g.attr("transform", transform);
-    }
+    const zoomed = ({transform}: any) => {
+      this.g.attr('transform', transform);
+    };
 
     this.svg.call(d3.zoom()
       .extent([[0, 0], [this.width, this.height]])
       .scaleExtent([0.5, 8])
-      .on("zoom", zoomed));
+      .on('zoom', zoomed));
     // link
-    this.link = d3.select(".graph__edges").selectAll("line")
+    this.link = d3.select('.graph__edges').selectAll('line');
     // node
-    this.node = d3.select(".graph__nodes").selectAll(".node");
+    this.node = d3.select('.graph__nodes').selectAll('.node');
   }
 
-  initForce() {
+  private initForce() {
     this.simulation = d3.forceSimulation(this.nodes)
-      .force("charge", d3.forceManyBody().strength(-1000))
-      .force("link", d3.forceLink(this.links).distance(100))
-      .force("x", d3.forceX(this.width/2))
-      .force("y", d3.forceY(this.height/2))
-      //.force("center", d3.forceCenter(this.width/2, this.height/2))
+      .force('charge', d3.forceManyBody().strength(-1000))
+      .force('link', d3.forceLink(this.links).distance(100))
+      .force('x', d3.forceX(this.width / 2))
+      .force('y', d3.forceY(this.height / 2))
+      // .force("center", d3.forceCenter(this.width/2, this.height/2))
       .alphaTarget(0)
-      .on("tick", this.ticked);
+      .on('tick', this.ticked);
   }
 
-  ticked() {
-    this.node.attr("transform", (d: any) => { return "translate(" + d.x + "," + d.y + ")"; });
-    this.link.attr("x1", (d:any) => { return d.source.x; })
-        .attr("y1", (d:any) => { return d.source.y; })
-        .attr("x2", (d:any) => { return d.target.x; })
-        .attr("y2", (d:any) => { return d.target.y; });
+  private ticked() {
+    this.node.attr('transform', (d: any) => 'translate(' + d.x + ',' + d.y + ')' );
+    this.link.attr('x1', (d: any) => d.source.x )
+      .attr('y1', (d: any) =>  d.source.y )
+      .attr('x2', (d: any) =>  d.target.x )
+      .attr('y2', (d: any) =>  d.target.y );
   }
 
-  restart() {
+  private restart() {
     // Apply the general update pattern to the nodes.
-    this.node = this.node.data(this.nodes, (d: any) => { return d.id;});
+    this.node = this.node.data(this.nodes, (d: any) => d.id );
     this.node.exit().remove();
 
-    this.node = this.node.enter().append("g")
-      .attr("class", "node")
+    this.node = this.node.enter().append('g')
+      .attr('class', 'node')
       .merge(this.node);
 
-    this.node.append("circle")
-      .attr("r", 5)
+    this.node.append('circle')
+      .attr('r', 5)
       .merge(this.node);
 
-    this.node.append("text")
-      .attr("dy", "-0.8em")
-      .text((d: any) => { return d.id; })
+    this.node.append('text')
+      .attr('dy', '-0.8em')
+      .text((d: any) => d.id)
       .merge(this.node);
 
     // Apply the general update pattern to the links.
-    this.link = this.link.data(this.links, (d: any) => { return d.source.id + "-" + d.target.id; });
+    this.link = this.link.data(this.links, (d: any) => {
+      return d.source.id + '-' + d.target.id;
+      });
     this.link.exit().remove();
-    this.link = this.link.enter().append("line")
-      .attr("marker-end", "url(#triangle)")
+    this.link = this.link.enter().append('line')
+      .attr('marker-end', 'url(#triangle)')
       .merge(this.link);
 
     // Update and restart the simulation.
     this.simulation.nodes(this.nodes);
-    this.simulation.force("link").links(this.links);
+    this.simulation.force('link').links(this.links);
     this.simulation.alpha(1).restart();
   }
 
@@ -224,37 +226,36 @@ export default class GraphDirected extends Vue {
     return `0 0 ${this.width} ${this.height}`;
   }
 
-  getNodeById(id: string): number {
-    return this.nodes.findIndex((node: any)=> node.id === id);
+  private getNodeById(id: string): number {
+    return this.nodes.findIndex((node: any) => node.id === id);
   }
 
-  adNode() {
-      const newNode = {
-        id: this.newNodeName,
-      }
-      this.nodes.push(newNode);
-      this.newNodeName = '';
-      this.restart();
+  private adNode() {
+    const newNode = {
+      id: this.newNodeName,
+    };
+    this.nodes.push(newNode);
+    this.newNodeName = '';
+    this.restart();
   }
 
-  adLink() {
+  private adLink() {
     const newLink = {
       source: this.sourceId,
       target: this.targetId,
-    }
-    
+    };
     this.links.push(newLink);
-    this.restart(); 
+    this.restart();
     this.findAllPathes();
   }
 
-  delNode(index: number) {
+  private delNode(index: number) {
     this.nodes.splice(index, 1);
     this.restart();
     this.findAllPathes();
   }
 
-  delLink(index: number) {
+  private delLink(index: number) {
     this.links.splice(index, 1);
     this.restart();
     this.findAllPathes();
@@ -275,71 +276,70 @@ export default class GraphDirected extends Vue {
     let toNodeId = this.getNodeById(this.pathTarget);
     let foundPath = pathFinder.find(fromNodeId, toNodeId);
     this.setCurPath(foundPath);
-    
     this.highLightPath(0);
   }
   */
 
-  //all pathes
-  findAllPathes() {
+  // all paths
+  private findAllPathes() {
     this.pathIndex = -1;
-    const graph = new Graph()
+    const graph = new Graph();
 
     this.nodes.forEach( (node: any, index: number) => {
       const name = index;
       const targets = this.links.filter( (link: any) => {
-        return (link.source.index === index)
+        return (link.source.index === index);
       });
       const neighbours = targets.reduce((obj: any, link: any) => {
         obj[link.target.index.toString()] = 1;
-       return obj
-      }, {})
+        return obj;
+      }, {});
       graph.addNode(name.toString(), neighbours);
-    })
+    });
 
     this.pathes = graph.path(this.pathSourceId.toString(), this.pathTargetId.toString());
   }
 
   @Watch('pathIndex')
-  onPathChanged(val: number) {
+  private onPathChanged(val: number) {
     if (val !== -1) {
-      this.highLightPath(val)
+      this.highLightPath(val);
     } else {
       this.highLightPath(-1);
     }
   }
 
-  highLightPath(index: number) {
-    if ( index == -1) {
-      const all = d3.selectAll("line")
-      .attr('stroke', '#c4c4c4')
+  private highLightPath(index: number) {
+    if ( index === -1) {
+      const all = d3.selectAll('line')
+      .attr('stroke', '#c4c4c4');
     } else {
       this.setCurPath(this.pathes[index]);
-      const all = d3.selectAll("line")
-      .attr('stroke', (d: any) => { 
-        if (this.inPath(d)) return 'green'
-        return '#c4c4c4'
-      })
+      const all = d3.selectAll('line')
+      .attr('stroke', (d: any) => {
+        if (this.inPath(d)) { return 'green'; }
+        return '#c4c4c4';
+      });
     }
   }
 
-  setCurPath(foundPath: any) {
-    const lineArr = []
-    for (let i=0; i<foundPath.length-1; i++) {
+  private setCurPath(foundPath: any) {
+    const lineArr = [];
+    for (let i = 0; i < foundPath.length - 1; i++) {
       const line = {
         source: +foundPath[i],
-        target: +foundPath[i+1],
-      }
+        target: +foundPath[i + 1],
+      };
       lineArr.push(line);
     }
     this.currentPathLines = lineArr;
   }
 
-  inPath(line:any) {
-    return this.currentPathLines.find((pathline:any) => {
-      return (pathline.source === line.source.index) && (pathline.target === line.target.index)
-      }
-    )
+  private inPath(line: any) {
+    return this.currentPathLines.find((pathline: any) => {
+        return (pathline.source === line.source.index) && (pathline.target === line.target.index);
+      },
+    );
   }
 
 }
