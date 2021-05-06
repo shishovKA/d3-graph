@@ -63,7 +63,7 @@
         <!-- arrow marker -->
         <defs>
           <marker id="triangle" viewBox="0 0 10 10"
-            refX="15" refY="5"
+            refX="22" refY="5"
             markerUnits="strokeWidth"
             markerWidth="10" markerHeight="5"
             orient="auto">
@@ -134,6 +134,12 @@ export default class GraphDirected extends Vue {
 
   private width = 500;
   private height = 500;
+  private nodeStyle = {
+    r: 10,
+    fill: '#fff',
+    stroke: '#000',
+    dy: '-1.0em'
+  };
   private nodes: any = [];
   private links: any = [];
   private simulation: any;
@@ -147,6 +153,7 @@ export default class GraphDirected extends Vue {
     this.initLayout();
     this.initForce();
     this.restart();
+    // this.updateSimulation();
     this.findAllPathes();
   }
 
@@ -199,12 +206,23 @@ export default class GraphDirected extends Vue {
       .merge(this.node);
 
     this.node.append('circle')
-      .attr('r', 5)
+      .attr('r', this.nodeStyle.r)
+      .attr('fill', this.nodeStyle.fill)
+      .attr('stroke', this.nodeStyle.stroke)
       .merge(this.node);
 
     this.node.append('text')
-      .attr('dy', '-0.8em')
+      .attr('dy', this.nodeStyle.dy)
       .text((d: any) => d.id)
+      .merge(this.node);
+
+    this.node.append('text')
+      .attr('dy', '0.3rem')
+      .text((d: any) => {
+        console.log(d);
+        if (d.hasOwnProperty('index')) { return d.index }
+        return this.nodes.length - 1;
+      })
       .merge(this.node);
 
     // Apply the general update pattern to the links.
@@ -216,11 +234,15 @@ export default class GraphDirected extends Vue {
       .attr('marker-end', 'url(#triangle)')
       .merge(this.link);
 
+    this.updateSimulation();
+  }
+
+  private updateSimulation() {
     // Update and restart the simulation.
     this.simulation.nodes(this.nodes);
     this.simulation.force('link').links(this.links);
     this.simulation.alpha(1).restart();
-  }
+  } 
 
   get viewBox() {
     return `0 0 ${this.width} ${this.height}`;
@@ -250,7 +272,14 @@ export default class GraphDirected extends Vue {
   }
 
   private delNode(index: number) {
+    const actualLinks = this.links.filter( (link: any) => {
+      return (link.source.index !== index) && (link.target.index !== index)
+    })
+    this.links = actualLinks;
     this.nodes.splice(index, 1);
+    this.nodes.forEach( (node: any, index: number) => {
+      node.index = index;
+    })
     this.restart();
     this.findAllPathes();
   }
