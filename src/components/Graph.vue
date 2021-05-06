@@ -138,7 +138,7 @@ export default class GraphDirected extends Vue {
     r: 10,
     fill: '#fff',
     stroke: '#000',
-    dy: '-1.0em'
+    dy: '-1.0em',
   };
   private nodes: any = [];
   private links: any = [];
@@ -219,8 +219,7 @@ export default class GraphDirected extends Vue {
     this.node.append('text')
       .attr('dy', '0.3rem')
       .text((d: any) => {
-        console.log(d);
-        if (d.hasOwnProperty('index')) { return d.index }
+        if (d.hasOwnProperty('index')) { return d.index; }
         return this.nodes.length - 1;
       })
       .merge(this.node);
@@ -242,7 +241,7 @@ export default class GraphDirected extends Vue {
     this.simulation.nodes(this.nodes);
     this.simulation.force('link').links(this.links);
     this.simulation.alpha(1).restart();
-  } 
+  }
 
   get viewBox() {
     return `0 0 ${this.width} ${this.height}`;
@@ -272,14 +271,14 @@ export default class GraphDirected extends Vue {
   }
 
   private delNode(index: number) {
-    const actualLinks = this.links.filter( (link: any) => {
-      return (link.source.index !== index) && (link.target.index !== index)
-    })
+    const actualLinks = this.links.filter((link: any) => {
+      return (link.source.index !== index) && (link.target.index !== index);
+    });
     this.links = actualLinks;
     this.nodes.splice(index, 1);
-    this.nodes.forEach( (node: any, index: number) => {
-      node.index = index;
-    })
+    this.nodes.forEach( (node: any, ind: number) => {
+      node.index = ind;
+    });
     this.restart();
     this.findAllPathes();
   }
