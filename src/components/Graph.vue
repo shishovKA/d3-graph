@@ -84,11 +84,11 @@
   <div class="panel__container panel__container_paths">
     <p class="panel__title">Paths:</p>
     <div class="panel__row">
-      <select v-model="pathSourceId" @change="findAllPathes">
+      <select v-model="pathSourceId" @change="findPaths">
         <option :value="node.index" v-for="node in this.nodes" :key="node.index">{{(node.id === '') ? `#${node.index}` : node.id}}</option>
       </select>
       <p class="arrow">→</p>
-      <select v-model="pathTargetId" @change="findAllPathes">
+      <select v-model="pathTargetId" @change="findPaths">
         <option :value="node.index" v-for="node in this.nodes" :key="node.index">{{(node.id === '') ? `#${node.index}` : node.id}}</option>
       </select>
     </div>
@@ -111,11 +111,10 @@
 
 <script lang="ts">
 import { Component, Prop, Watch, Vue } from 'vue-property-decorator';
+
 import * as d3 from 'd3';
-// @ts-ignore
-import Graph from 'node-all-paths';
-// import createGraph from 'ngraph.graph';
-// import path from 'ngraph.path';
+
+type Path = number[];
 
 @Component
 export default class GraphDirected extends Vue {
@@ -123,8 +122,6 @@ export default class GraphDirected extends Vue {
   @Prop() private dataEdges!: any;
 
   private newNodeName = '';
-  private source = '';
-  private target = '';
   private sourceId = 0;
   private targetId = 1;
   private pathSourceId = 0;
@@ -138,12 +135,12 @@ export default class GraphDirected extends Vue {
     r: 10,
     fill: '#fff',
     stroke: '#000',
-    dy: '-1.0em'
+    dy: '-1.0em',
   };
   private nodes: any = [];
   private links: any = [];
   private simulation: any;
-  private pathes = [];
+  private pathes: Path[] = [];
   private link!: any;
   private node!: any;
   private svg!: any;
@@ -153,8 +150,7 @@ export default class GraphDirected extends Vue {
     this.initLayout();
     this.initForce();
     this.restart();
-    // this.updateSimulation();
-    this.findAllPathes();
+    this.findPaths();
   }
 
   private initLayout() {
@@ -179,7 +175,7 @@ export default class GraphDirected extends Vue {
 
   private initForce() {
     this.simulation = d3.forceSimulation(this.nodes)
-      .force('charge', d3.forceManyBody().strength(-1000))
+      .force('charge', d3.forceManyBody().strength(-900))
       .force('link', d3.forceLink(this.links).distance(100))
       .force('x', d3.forceX(this.width / 2))
       .force('y', d3.forceY(this.height / 2))
@@ -219,8 +215,7 @@ export default class GraphDirected extends Vue {
     this.node.append('text')
       .attr('dy', '0.3rem')
       .text((d: any) => {
-        console.log(d);
-        if (d.hasOwnProperty('index')) { return d.index }
+        if (d.hasOwnProperty('index')) { return d.index; }
         return this.nodes.length - 1;
       })
       .merge(this.node);
@@ -242,14 +237,10 @@ export default class GraphDirected extends Vue {
     this.simulation.nodes(this.nodes);
     this.simulation.force('link').links(this.links);
     this.simulation.alpha(1).restart();
-  } 
+  }
 
   get viewBox() {
     return `0 0 ${this.width} ${this.height}`;
-  }
-
-  private getNodeById(id: string): number {
-    return this.nodes.findIndex((node: any) => node.id === id);
   }
 
   private adNode() {
@@ -268,65 +259,58 @@ export default class GraphDirected extends Vue {
     };
     this.links.push(newLink);
     this.restart();
-    this.findAllPathes();
+    this.findPaths();
   }
 
   private delNode(index: number) {
     const actualLinks = this.links.filter( (link: any) => {
-      return (link.source.index !== index) && (link.target.index !== index)
-    })
+      return (link.source.index !== index) && (link.target.index !== index);
+    });
     this.links = actualLinks;
     this.nodes.splice(index, 1);
-    this.nodes.forEach( (node: any, index: number) => {
-      node.index = index;
-    })
+    this.nodes.forEach( (node: any, ind: number) => {
+      node.index = ind;
+    });
     this.restart();
-    this.findAllPathes();
+    this.findPaths();
   }
 
   private delLink(index: number) {
     this.links.splice(index, 1);
     this.restart();
-    this.findAllPathes();
+    this.findPaths();
   }
-
-  /* shortest
-  findpath() {
-    const graph = createGraph();
-    this.nodes.forEach((node: any) => {
-      graph.addNode(node.index);
-    })
-    this.links.forEach((link: any) => {
-      graph.addLink(link.source.index, link.target.index);
-    })
-
-    let pathFinder = path.aStar(graph, { oriented: true });
-    let fromNodeId = this.getNodeById(this.pathSource);
-    let toNodeId = this.getNodeById(this.pathTarget);
-    let foundPath = pathFinder.find(fromNodeId, toNodeId);
-    this.setCurPath(foundPath);
-    this.highLightPath(0);
-  }
-  */
-
-  // all paths
-  private findAllPathes() {
+  
+  // my custom func
+  private findPaths() {
     this.pathIndex = -1;
-    const graph = new Graph();
+    const graph: number[][] = [];
 
     this.nodes.forEach( (node: any, index: number) => {
-      const name = index;
-      const targets = this.links.filter( (link: any) => {
-        return (link.source.index === index);
-      });
-      const neighbours = targets.reduce((obj: any, link: any) => {
-        obj[link.target.index.toString()] = 1;
-        return obj;
-      }, {});
-      graph.addNode(name.toString(), neighbours);
+      const neighbours: number[] = [];
+      this.links.filter( (link: any) => (link.source.index === index))
+        .forEach( (link: any) => {
+          neighbours.push(link.target.index);
+        });
+      graph.push(neighbours);
     });
 
-    this.pathes = graph.path(this.pathSourceId.toString(), this.pathTargetId.toString());
+    const pathes: Path[] = [];
+    const pathFinder = (source: number, target: number, path: Path) => {
+      const hasSource = path.findIndex((node: number) => node === source);
+      if (hasSource !== -1) { return; }
+      path.push(source);
+      if ( source === target ) {
+        pathes.push(path);
+        return;
+      }
+      if (graph[source].length === 0) { return; }
+      graph[source].forEach ( (newTarget: number) => {
+        pathFinder(newTarget, target, path.slice());
+      });
+    };
+    pathFinder(this.pathSourceId, this.pathTargetId, []);
+    this.pathes = pathes;
   }
 
   @Watch('pathIndex')
@@ -374,160 +358,41 @@ export default class GraphDirected extends Vue {
 }
 </script>
 
+
 <style scoped>
 
-  .main {
-    display: flex;
-    width: 100%;
-    flex-direction: row;
-    flex-wrap: nowrap;
-    justify-content: start;
-    align-items: flex-start;
-  }
+@import './graph.css';
 
- svg {
-   background-color: rgb(248, 248, 248);
- }
+.main {
+  display: flex;
+  width: 100%;
+  flex-direction: row;
+  flex-wrap: nowrap;
+  justify-content: start;
+  align-items: flex-start;
+}
 
- .graph__container {
-   margin: 0 auto;
-   display: flex;
-   flex-direction: column;
-   align-items: center;
- }
+svg {
+  background-color: rgb(248, 248, 248);
+}
+
+.graph__container {
+  margin: 0 auto;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
  
- .graph__nodes { 
-    font: 14px sans-serif;
-    pointer-events: none;
-    text-anchor: middle; 
-  }
+.graph__nodes { 
+  font: 14px sans-serif;
+  pointer-events: none;
+  text-anchor: middle; 
+}
 
 .graph__edges {
   fill: none;
   stroke: #c4c4c4;
   stroke-width: 1.5px;
-}
-
-.panel__container {
-  display: flex;
-  flex-direction: column;
-  align-items: flex-start;
-  border: solid 1px grey;
-  padding: 10px;
-  border-radius: 20px;
-  width: 200px;
-  margin: 0px 10px;
-}
-
-.panel__container_edges {
-  width: 300px;
-}
-
-.panel__container_paths {
-  width: 300px;
-  margin: 0;
-  margin-top: 10px;
-}
-
-.panel__title {
-  margin: 5px 0px;
-  font-weight: 700;
-  border-bottom: 1px solid black;
-  width: 100%;
-  text-align: left;
-}
-
-.panel__subtitle {
-  margin: 2px 0px;
-  font-size: 14px;
-}
-
-.panel__row {
-  display: flex;
-  flex-direction: row;
-  justify-content: space-between;
-  width: 100%;
-  margin: 2px 0px;
-}
-
-.list__container {
-  width: 100%;
-}
-
-.node__item {
-  display: flex;
-  flex-wrap: nowrap;
-  align-items: center;
-  justify-content: start;
-  width: 100%;
-  font-size: 14px;
-}
-
-.node__index {
-  margin: 0;
-  font-weight: bold;
-  width: 25px;
-}
-
-.node__id {
-  margin: 0px 10px;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-  overflow: hidden;
-  max-width: 150px;
-}
-
-.edge__id {
-  display: flex;
-  flex-wrap: nowrap;
-  flex-direction: row;
-  justify-content: space-between;
-  margin: 0px 5px;
-}
-
-.edge__source {
-  text-overflow: ellipsis;
-  white-space: nowrap;
-  overflow: hidden;
-  width: 100px;
-  max-width: 90px;
-  border: solid 1px black;
-  border-radius: 5px;
-  padding: 0 5px;
-  margin: 0px 4px;
-}
-
-.button {
-  cursor: pointer;
-  padding: 3px;
-  margin: 2px 0px;
-  margin-left: auto;
-  width: 20px;
-  height: 20px;
-  border-radius: 5px;
-}
-
-.arrow {
-  margin: 0 5px;
-  font-size: 16px;
-  line-height: 30px;
-}
-
-.button_delete:hover {
-  background-color: rgb(255, 140, 140);
-}
-
-.button_add:hover {
-  background-color: rgb(155, 218, 153);
-}
-
-.button_find:hover {
-  background-color: rgb(255, 232, 169);
-}
-
-select {
-  max-width: 120px;
-  width: 120px;
 }
 
 </style>
