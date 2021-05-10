@@ -115,20 +115,21 @@ import { Component, Prop, Watch, Vue } from 'vue-property-decorator';
 import * as d3 from 'd3';
 
 type Path = number[];
+interface SimpleLine { source: number; target: number; }
 
 @Component
 export default class GraphDirected extends Vue {
   @Prop() private dataNodes!: any;
   @Prop() private dataEdges!: any;
 
+  // interface
   private newNodeName = '';
   private sourceId = 0;
   private targetId = 1;
   private pathSourceId = 0;
   private pathTargetId = 1;
   private pathIndex = -1;
-  private currentPathLines: any[] = [];
-
+  // layout
   private width = 500;
   private height = 500;
   private nodeStyle = {
@@ -137,14 +138,15 @@ export default class GraphDirected extends Vue {
     stroke: '#000',
     dy: '-1.0em',
   };
+  // d3
   private nodes: any = [];
   private links: any = [];
   private simulation: any;
-  private pathes: Path[] = [];
   private link!: any;
   private node!: any;
-  private svg!: any;
-  private g!: any;
+  // path finder
+  private currentPathLines: SimpleLine[] = [];
+  private pathes: Path[] = [];
 
   private mounted() {
     this.initLayout();
@@ -156,20 +158,19 @@ export default class GraphDirected extends Vue {
   private initLayout() {
     this.nodes = this.dataNodes.slice();
     this.links = this.dataEdges.slice();
-    this.svg = d3.select('svg');
-    this.g = d3.select('.graph__group');
+    const svg: any = d3.select('svg');
+    const g = d3.select('.graph__group');
 
     const zoomed = ({transform}: any) => {
-      this.g.attr('transform', transform);
+      g.attr('transform', transform);
     };
 
-    this.svg.call(d3.zoom()
+    svg.call(d3.zoom()
       .extent([[0, 0], [this.width, this.height]])
       .scaleExtent([0.5, 8])
       .on('zoom', zoomed));
-    // link
+
     this.link = d3.select('.graph__edges').selectAll('line');
-    // node
     this.node = d3.select('.graph__nodes').selectAll('.node');
   }
 
@@ -208,12 +209,13 @@ export default class GraphDirected extends Vue {
       .merge(this.node);
 
     this.node.append('text')
+      // .attr('dominant-baseline', 'middle')
       .attr('dy', this.nodeStyle.dy)
       .text((d: any) => d.id)
       .merge(this.node);
-
+    
     this.node.append('text')
-      .attr('dy', '0.3rem')
+      .attr('dy', '0.3em')
       .text((d: any) => {
         if (d.hasOwnProperty('index')) { return d.index; }
         return this.nodes.length - 1;
@@ -233,7 +235,6 @@ export default class GraphDirected extends Vue {
   }
 
   private updateSimulation() {
-    // Update and restart the simulation.
     this.simulation.nodes(this.nodes);
     this.simulation.force('link').links(this.links);
     this.simulation.alpha(1).restart();
@@ -280,7 +281,7 @@ export default class GraphDirected extends Vue {
     this.restart();
     this.findPaths();
   }
-  
+
   // my custom func
   private findPaths() {
     this.pathIndex = -1;
@@ -336,7 +337,7 @@ export default class GraphDirected extends Vue {
     }
   }
 
-  private setCurPath(foundPath: any) {
+  private setCurPath(foundPath: Path) {
     const lineArr = [];
     for (let i = 0; i < foundPath.length - 1; i++) {
       const line = {
@@ -386,7 +387,7 @@ svg {
 .graph__nodes { 
   font: 14px sans-serif;
   pointer-events: none;
-  text-anchor: middle; 
+  text-anchor: middle;
 }
 
 .graph__edges {
